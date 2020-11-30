@@ -5,6 +5,7 @@ import gettext
 import locale
 import gi
 import configparser
+import random
 
 locale.setlocale(locale.LC_ALL, '')
 _ = gettext.gettext
@@ -13,7 +14,6 @@ gi.require_version("Gtk", "3.0")
 from gi.repository import Gtk
 
 proadd = _("Add Profile")
-mcount = 0
 
 #            fdialog = Gtk.FileChooserDialog(_("Please select an image"), self,
 #                    Gtk.FileChooserAction.OPEN,
@@ -34,10 +34,9 @@ def ErrorMesg(msg):
     win.destroy()
 
 class ConProfile(Gtk.Dialog):
-    def __init__(self, conini):
+    def __init__(self):
         self.win = Gtk.Window()
         super().__init__(parent=win)
-        self.conini = conini
         self.set_title(_("Add New Profile"))
         self.set_default_size(400, 300)
         self.add_button(_("_OK"), Gtk.ResponseType.OK)
@@ -47,7 +46,6 @@ class ConProfile(Gtk.Dialog):
         self.response = Gtk.ResponseType.CANCEL
         self.sec = ''
         self.profile = {}
-        self.mcount = mcount
 
         hbox = Gtk.Box()
         hbox.set_homogeneous(False)
@@ -109,8 +107,7 @@ class ConProfile(Gtk.Dialog):
         self.sec = self.id.get_text()
         self.profile['ip'] = self.ip.get_text()
         self.profile['user'] = self.user.get_text()
-        self.profile['picture'] = "./user-" + str(self.mcount%4 + 1) + ".png"
-        self.mcount += 1
+        self.profile['picture'] = "./user-" + str(random.randint(1,4)) + ".png"
 
     def radio_on_selected(self, rbtn):
         if rbtn.get_active():
@@ -121,10 +118,10 @@ class ConProfile(Gtk.Dialog):
         self.win.destroy()
         
 class LIcon(Gtk.EventBox):
-    def __init__(self, conini, sec):
+    def __init__(self, sec, profile):
         super().__init__()
         self.sec = sec
-        self.conini = conini
+        self.profile = profile
         self.connect("button-press-event", self.on_event_press)
         vbox = Gtk.VBox()
         vbox.set_homogeneous(False)
@@ -132,7 +129,7 @@ class LIcon(Gtk.EventBox):
         vbox.show()
 
         image = Gtk.Image()
-        image.set_from_file(self.conini[sec]['picture'])
+        image.set_from_file(profile['picture'])
         vbox.pack_start(image, False, False, 0)
         image.show()
         label = Gtk.Label(label=self.sec)
@@ -141,20 +138,22 @@ class LIcon(Gtk.EventBox):
 
     def on_event_press(self, ebox, event):
         if self.sec == proadd:
-            condial = ConProfile(self.conini)
+            condial = ConProfile()
             condial.show()
             response = condial.run()
             condial.destroy()
+            errmsg = ''
             if response == Gtk.ResponseType.OK:
                 if len(condial.sec) == 0:
                     errmsg = _("Missing Profile ID")
-                elif condial.sec in self.conini.sections():
-                    errmsg = _("Duplicate Profile ID")
-                else:
-                    errmsg = ''
+                elif len(condial.profile['user']) == 0:
+                    errmsg = _("Missing User Name")
+                elif len(condial.profile['ip']) == 0:
+                    errmsg = _("Missing Remote Host/IP")
                 if len(errmsg) != 0:
                     ErrorMesg(errmsg)
                     return
+                
                 print("Section: {}".format(condial.sec))
                 print(condial.profile)
         else:
@@ -164,7 +163,6 @@ class MWin(Gtk.Window):
     def __init__(self, conini):
         super().__init__(title=_("Connection Profiles"))
         self.conini = conini;
-        self.icons = []
 
         vbox = Gtk.VBox()
         vbox.set_homogeneous(False)
@@ -176,17 +174,12 @@ class MWin(Gtk.Window):
         vbox.pack_start(self.hbox, False, False, 0)
         self.hbox.show()
         
-        if not proadd in conini.sections():
-            conini[proadd] = {}
-            conini[proadd]['picture'] = "./512px-New_user_icon-01.png"
-        icon = LIcon(self.conini, proadd)
+        icon = LIcon(proadd, {'picture': "./512px-New_user_icon-01.png"})
         self.hbox.pack_start(icon, False, False, 8)
         icon.show()
 
         for sec in self.conini.sections():
-            if sec == proadd:
-                continue
-            icon = LIcon(self.conini, sec)
+            icon = LIcon(self.conini, self.conini[sec])
             self.hbox.pack_start(icon, False, False, 8)
             icon.show()
             self.icons.append(icon)
