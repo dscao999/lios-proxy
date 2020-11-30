@@ -76,7 +76,7 @@ def ErrorMesg(msg):
     win.destroy()
 
 class ConProfile(Gtk.Dialog):
-    def __init__(self):
+    def __init__(self, sec, profile):
         self.win = Gtk.Window()
         super().__init__(parent=win)
         self.set_title(_("Add New Profile"))
@@ -86,7 +86,7 @@ class ConProfile(Gtk.Dialog):
         self.connect("response", self.on_response)
         self.response = Gtk.ResponseType.CANCEL
         self.sec = ''
-        self.profile = {}
+        self.profile = profile
 
         hbox = Gtk.Box()
         hbox.set_homogeneous(False)
@@ -96,6 +96,7 @@ class ConProfile(Gtk.Dialog):
         hbox.add(label)
         label.show()
         self.id = Gtk.Entry()
+        self.id.set_text(sec)
         self.id.set_max_length(48)
         hbox.pack_start(self.id, True, True, 0)
         self.id.show()
@@ -115,7 +116,6 @@ class ConProfile(Gtk.Dialog):
         rbtn2.connect("toggled", self.radio_on_selected)
         hbox.pack_start(rbtn2, True, True, 0)
         rbtn2.show()
-        self.profile["proto"] = "SPICE"
 
         hbox = Gtk.Box()
         hbox.set_homogeneous(False)
@@ -125,6 +125,11 @@ class ConProfile(Gtk.Dialog):
         hbox.add(label)
         label.show()
         self.ip = Gtk.Entry()
+        try:
+            ipaddr = profile['ip']
+        except:
+            ipaddr = ''
+        self.ip.set_text(ipaddr)
         hbox.pack_start(self.ip, True, True, 0)
         self.ip.show()
 
@@ -136,7 +141,14 @@ class ConProfile(Gtk.Dialog):
         hbox.add(label)
         label.show()
         self.port = Gtk.Entry()
-        self.port.set_text("5900")
+        try:
+            port = profile['port']
+        except:
+            if profile['proto'] == "SPICE":
+                port = "5900"
+            elif profile['proto'] == "RD":
+                port = "3389"
+        self.port.set_text(port)
         hbox.pack_start(self.port, True, True, 0)
         self.port.show()
 
@@ -148,6 +160,11 @@ class ConProfile(Gtk.Dialog):
         hbox.add(label)
         label.show()
         self.user = Gtk.Entry()
+        try:
+            username = profile['user']
+        except:
+            username = ''
+        self.user.set_text(username)
         hbox.pack_start(self.user, True, True, 0)
         self.user.show()
 
@@ -159,8 +176,19 @@ class ConProfile(Gtk.Dialog):
         hbox.add(label)
         label.show()
         self.optarg = Gtk.Entry()
+        try:
+            optarg = profile['optarg']
+        except:
+            optarg = ''
+        self.optarg.set_text(optarg)
         hbox.pack_start(self.optarg, True, True, 0)
         self.optarg.show()
+
+        proto = profile['proto']
+        if proto == "SPICE":
+            rbtn1.set_active(True)
+        elif proto == "RDP":
+            rbtn2.set_active(True)
 
     def on_response(self, dialog, response):
         if response == Gtk.ResponseType.CANCEL:
@@ -188,11 +216,14 @@ class ConProfile(Gtk.Dialog):
         self.win.destroy()
         
 class LIcon(Gtk.EventBox):
-    def __init__(self, win, sec, profile):
+    def __init__(self, win, sec):
         super().__init__()
         self.mwin = win
         self.sec = sec
-        self.profile = profile
+        if sec != proadd:
+            self.profile = win.conini[sec]
+        else:
+            self.profile = win.conini['DEFAULT']
         self.connect("button-press-event", self.on_event_press)
         vbox = Gtk.VBox()
         vbox.set_homogeneous(False)
@@ -200,7 +231,7 @@ class LIcon(Gtk.EventBox):
         vbox.show()
 
         image = Gtk.Image()
-        image.set_from_file(profile['picture'])
+        image.set_from_file(self.profile['picture'])
         vbox.pack_start(image, False, False, 0)
         image.show()
         label = Gtk.Label(label=self.sec)
@@ -209,12 +240,12 @@ class LIcon(Gtk.EventBox):
 
     def on_event_press(self, ebox, event):
         if self.sec == proadd:
+            condial = ConProfile('def', self.profile)
+            condial.resize(600, 400)
+            condial.show()
+            response = condial.run()
+            condial.destroy()
             if event.button == 1:
-                condial = ConProfile()
-                condial.resize(600, 400)
-                condial.show()
-                response = condial.run()
-                condial.destroy()
                 errmsg = ''
                 if response == Gtk.ResponseType.OK:
                     if len(condial.sec) == 0:
@@ -223,13 +254,19 @@ class LIcon(Gtk.EventBox):
                         errmsg = _("Missing User Name")
                     elif len(condial.profile['ip']) == 0:
                         errmsg = _("Missing Remote Host/IP")
+                    elif condial.sec in self.mwin.conini.sections():
+                        errmsg = _("Duplicate Profile Name")
                     if len(errmsg) != 0:
                         ErrorMesg(errmsg)
                         return
                 
-                    print("Section: {}".format(condial.sec))
-                    print(condial.profile)
                     GLib.idle_add(self.mwin.add_icon, condial.sec, condial.profile)
+                    self.mwin.conmod = 1
+            elif event.button == 3:
+                if response == Gtk.ResponseType.OK:
+                    for key in condial.profile.keys():
+                        self.mwin.conini['DEFAULT'][key] = condial.profile[key]
+                    self.mwin.conmod = 1
         else:
             if event.button == 1:
                 remote_connect(self.profile)
@@ -238,6 +275,7 @@ class MWin(Gtk.Window):
     def __init__(self, conini):
         super().__init__(title=_("Connection Profiles"))
         self.conini = conini;
+        self.conmod = 0
 
         vbox = Gtk.VBox()
         vbox.set_homogeneous(False)
@@ -249,15 +287,22 @@ class MWin(Gtk.Window):
         vbox.pack_start(self.hbox, False, False, 0)
         self.hbox.show()
         
-        icon = LIcon(self, proadd, {'picture': "./512px-New_user_icon-01.png"})
+        try:
+            pic = self.conini['DEFAULT']['picture']
+        except:
+            print("Set DEFAULT to default")
+            self.conini['DEFAULT']['picture'] = '512px-New_user_icon-01.png'
+            self.conini['DEFAULT']['proto'] = 'SPICE'
+            self.conini['DEFAULT']['port'] = '5900'
+            self.conmod = 1
+        icon = LIcon(self, proadd)
         self.hbox.pack_start(icon, False, False, 8)
         icon.show()
 
         for sec in self.conini.sections():
-            icon = LIcon(self, sec, self.conini[sec])
+            icon = LIcon(self, sec)
             self.hbox.pack_start(icon, False, False, 8)
             icon.show()
-            print(conini[sec]['port'])
 
         hbox = Gtk.Box()
         hbox.set_homogeneous(True)
@@ -276,7 +321,7 @@ class MWin(Gtk.Window):
 
     def add_icon(self, sec, profile):
         self.conini[sec] = profile
-        icon = LIcon(self, sec, profile)
+        icon = LIcon(self, sec)
         self.hbox.pack_start(icon, False, False, 8)
         icon.show()
 
@@ -304,7 +349,9 @@ win.resize(800, 300)
 win.show()
 Gtk.main()
 
-with open(confile, 'w') as inif:
-    conini.write(inif)
+if win.conmod != 0:
+    with open(confile, 'w') as inif:
+        conini['DEFAULT']['picture'] = '512px-New_user_icon-01.png'
+        conini.write(inif)
 
 sys.exit(0)
