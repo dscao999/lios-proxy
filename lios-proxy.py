@@ -11,7 +11,7 @@ locale.setlocale(locale.LC_ALL, '')
 _ = gettext.gettext
 
 gi.require_version("Gtk", "3.0")
-from gi.repository import Gtk
+from gi.repository import Gtk, GLib
 
 proadd = _("Add Profile")
 
@@ -38,7 +38,6 @@ class ConProfile(Gtk.Dialog):
         self.win = Gtk.Window()
         super().__init__(parent=win)
         self.set_title(_("Add New Profile"))
-        self.set_default_size(400, 300)
         self.add_button(_("_OK"), Gtk.ResponseType.OK)
         self.add_button(_("_Cancel"), Gtk.ResponseType.CANCEL)
         self.set_default_response(Gtk.ResponseType.OK)
@@ -118,8 +117,9 @@ class ConProfile(Gtk.Dialog):
         self.win.destroy()
         
 class LIcon(Gtk.EventBox):
-    def __init__(self, sec, profile):
+    def __init__(self, win, sec, profile):
         super().__init__()
+        self.mwin = win
         self.sec = sec
         self.profile = profile
         self.connect("button-press-event", self.on_event_press)
@@ -156,7 +156,13 @@ class LIcon(Gtk.EventBox):
                 
                 print("Section: {}".format(condial.sec))
                 print(condial.profile)
+                GLib.idle_add(self.mwin.add_icon, condial.sec, condial.profile)
         else:
+            if self.profile['proto'] != "RDP":
+                errmsg = _("Protocol ") + self.profile['proto'] + _(" Not Implemented")
+                ErrorMesg(errmsg)
+                return
+
             print("Will initiate a connection")
 
 class MWin(Gtk.Window):
@@ -174,15 +180,14 @@ class MWin(Gtk.Window):
         vbox.pack_start(self.hbox, False, False, 0)
         self.hbox.show()
         
-        icon = LIcon(proadd, {'picture': "./512px-New_user_icon-01.png"})
+        icon = LIcon(self, proadd, {'picture': "./512px-New_user_icon-01.png"})
         self.hbox.pack_start(icon, False, False, 8)
         icon.show()
 
         for sec in self.conini.sections():
-            icon = LIcon(self.conini, self.conini[sec])
+            icon = LIcon(self, sec, self.conini[sec])
             self.hbox.pack_start(icon, False, False, 8)
             icon.show()
-            self.icons.append(icon)
 
         hbox = Gtk.Box()
         hbox.set_homogeneous(True)
@@ -199,6 +204,11 @@ class MWin(Gtk.Window):
         hbox.pack_end(self.shutbut, True, True, 0)
         self.shutbut.show()
 
+    def add_icon(self, sec, profile):
+        self.conini[sec] = profile
+        icon = LIcon(self, sec, profile)
+        self.hbox.pack_start(icon, False, False, 8)
+        icon.show()
 
     def on_button_clicked(self, widget):
         if widget == self.rebbut:
@@ -223,3 +233,8 @@ win.connect("destroy", Gtk.main_quit)
 win.resize(800, 300)
 win.show()
 Gtk.main()
+
+with open(confile, 'w') as inif:
+    conini.write(inif)
+
+sys.exit(0)
