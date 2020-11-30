@@ -47,6 +47,10 @@ def DialogPassword():
     return pwdstr
 
 def remote_connect(profile):
+    if profile['proto'] != "RDP":
+        errmsg = _("Protocol ") + self.profile['proto'] + _(" Not Implemented")
+        ErrorMesg(errmsg)
+        return
     proto = profile['proto']
     cmd = proto_cmd[proto]
     cmdlist = []
@@ -205,34 +209,30 @@ class LIcon(Gtk.EventBox):
 
     def on_event_press(self, ebox, event):
         if self.sec == proadd:
-            condial = ConProfile()
-            condial.resize(600, 400)
-            condial.show()
-            response = condial.run()
-            condial.destroy()
-            errmsg = ''
-            if response == Gtk.ResponseType.OK:
-                if len(condial.sec) == 0:
-                    errmsg = _("Missing Profile ID")
-                elif len(condial.profile['user']) == 0:
-                    errmsg = _("Missing User Name")
-                elif len(condial.profile['ip']) == 0:
-                    errmsg = _("Missing Remote Host/IP")
-                if len(errmsg) != 0:
-                    ErrorMesg(errmsg)
-                    return
+            if event.button == 1:
+                condial = ConProfile()
+                condial.resize(600, 400)
+                condial.show()
+                response = condial.run()
+                condial.destroy()
+                errmsg = ''
+                if response == Gtk.ResponseType.OK:
+                    if len(condial.sec) == 0:
+                        errmsg = _("Missing Profile ID")
+                    elif len(condial.profile['user']) == 0:
+                        errmsg = _("Missing User Name")
+                    elif len(condial.profile['ip']) == 0:
+                        errmsg = _("Missing Remote Host/IP")
+                    if len(errmsg) != 0:
+                        ErrorMesg(errmsg)
+                        return
                 
-                print("Section: {}".format(condial.sec))
-                print(condial.profile)
-                GLib.idle_add(self.mwin.add_icon, condial.sec, condial.profile)
+                    print("Section: {}".format(condial.sec))
+                    print(condial.profile)
+                    GLib.idle_add(self.mwin.add_icon, condial.sec, condial.profile)
         else:
-            if self.profile['proto'] != "RDP":
-                errmsg = _("Protocol ") + self.profile['proto'] + _(" Not Implemented")
-                ErrorMesg(errmsg)
-                return
-
-            print("Will initiate a connection")
-            remote_connect(self.profile)
+            if event.button == 1:
+                remote_connect(self.profile)
 
 class MWin(Gtk.Window):
     def __init__(self, conini):
