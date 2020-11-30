@@ -13,6 +13,7 @@ _ = gettext.gettext
 gi.require_version("Gtk", "3.0")
 from gi.repository import Gtk, GLib
 
+proto_cmd = {'RDP': 'xfreerdp', 'SPICE':None}
 proadd = _("Add Profile")
 
 #            fdialog = Gtk.FileChooserDialog(_("Please select an image"), self,
@@ -23,6 +24,43 @@ proadd = _("Add Profile")
 #            iconfile = fdialog.get_filename()
 #        else:
 #            iconfile = "./user-1.png"
+def DialogPassword():
+    win = Gtk.Window()
+    md = Gtk.Dialog(win, title=_("Please Input Password"), transient_for=win, flags=0)
+    md.add_buttons(
+             Gtk.STOCK_OK, Gtk.ResponseType.OK, Gtk.STOCK_CANCEL, Gtk.ResponseType.CANCEL
+             )
+    md.resize(400, 50)
+    passwd = Gtk.Entry()
+    box = md.get_content_area()
+    box.add(passwd)
+    passwd.show()
+
+    response = md.run()
+
+    if response == Gtk.ResponseType.OK:
+        pwdstr = passwd.get_text()
+    else:
+        pwdstr = None
+    md.destroy()
+    win.destroy()
+    return pwdstr
+
+def remote_connect(profile):
+    proto = profile['proto']
+    cmd = proto_cmd[proto]
+    cmdlist = []
+    cmdlist.append(cmd)
+    remote = "/v:"+profile['ip']+":"+profile['port']
+    cmdlist.append(remote)
+    user = "/u:"+profile['user']
+    cmdlist.append(user)
+    cmdlist.append(profile['optarg'])
+    passwd = DialogPassword()
+    if passwd == None:
+        return
+    cmdlist.append("/p:"+passwd)
+    print(cmdlist)
 
 def ErrorMesg(msg):
     win = Gtk.Window()
@@ -54,7 +92,7 @@ class ConProfile(Gtk.Dialog):
         hbox.add(label)
         label.show()
         self.id = Gtk.Entry()
-        self.id.set_max_length(36)
+        self.id.set_max_length(48)
         hbox.pack_start(self.id, True, True, 0)
         self.id.show()
 
@@ -73,7 +111,7 @@ class ConProfile(Gtk.Dialog):
         rbtn2.connect("toggled", self.radio_on_selected)
         hbox.pack_start(rbtn2, True, True, 0)
         rbtn2.show()
-        self.profile['proto'] = rbtn1.get_label()
+        self.profile["proto"] = "SPICE"
 
         hbox = Gtk.Box()
         hbox.set_homogeneous(False)
@@ -83,9 +121,20 @@ class ConProfile(Gtk.Dialog):
         hbox.add(label)
         label.show()
         self.ip = Gtk.Entry()
-        self.ip.set_max_length(36)
         hbox.pack_start(self.ip, True, True, 0)
         self.ip.show()
+
+        hbox = Gtk.Box()
+        hbox.set_homogeneous(False)
+        hbox.show()
+        self.vbox.pack_start(hbox, False, False, 5)
+        label = Gtk.Label(_("           Port:"))
+        hbox.add(label)
+        label.show()
+        self.port = Gtk.Entry()
+        self.port.set_text("5900")
+        hbox.pack_start(self.port, True, True, 0)
+        self.port.show()
 
         hbox = Gtk.Box()
         hbox.set_homogeneous(False)
@@ -95,9 +144,19 @@ class ConProfile(Gtk.Dialog):
         hbox.add(label)
         label.show()
         self.user = Gtk.Entry()
-        self.user.set_max_length(36)
         hbox.pack_start(self.user, True, True, 0)
         self.user.show()
+
+        hbox = Gtk.Box()
+        hbox.set_homogeneous(False)
+        hbox.show()
+        self.vbox.pack_start(hbox, False, False, 5)
+        label = Gtk.Label(_("option arg:"))
+        hbox.add(label)
+        label.show()
+        self.optarg = Gtk.Entry()
+        hbox.pack_start(self.optarg, True, True, 0)
+        self.optarg.show()
 
     def on_response(self, dialog, response):
         if response == Gtk.ResponseType.CANCEL:
@@ -106,11 +165,19 @@ class ConProfile(Gtk.Dialog):
         self.sec = self.id.get_text()
         self.profile['ip'] = self.ip.get_text()
         self.profile['user'] = self.user.get_text()
+        self.profile['port'] = self.port.get_text()
+        self.profile['optarg'] = self.optarg.get_text()
         self.profile['picture'] = "./user-" + str(random.randint(1,4)) + ".png"
 
     def radio_on_selected(self, rbtn):
         if rbtn.get_active():
             self.profile['proto'] = rbtn.get_label()
+        if self.profile['proto'] == "RDP":
+            self.port.set_text("3389")
+            self.optarg.set_text("/gfx /sound /cert-tofu")
+        elif self.profile['proto'] == "SPICE":
+            self.port.set_text("5900")
+            self.optarg.set_text("")
 
     def destroy(self):
         super().destroy()
@@ -139,6 +206,7 @@ class LIcon(Gtk.EventBox):
     def on_event_press(self, ebox, event):
         if self.sec == proadd:
             condial = ConProfile()
+            condial.resize(600, 400)
             condial.show()
             response = condial.run()
             condial.destroy()
@@ -164,6 +232,7 @@ class LIcon(Gtk.EventBox):
                 return
 
             print("Will initiate a connection")
+            remote_connect(self.profile)
 
 class MWin(Gtk.Window):
     def __init__(self, conini):
@@ -188,6 +257,7 @@ class MWin(Gtk.Window):
             icon = LIcon(self, sec, self.conini[sec])
             self.hbox.pack_start(icon, False, False, 8)
             icon.show()
+            print(conini[sec]['port'])
 
         hbox = Gtk.Box()
         hbox.set_homogeneous(True)
