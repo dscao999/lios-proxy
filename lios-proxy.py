@@ -26,7 +26,6 @@ def child_exited(sig, frame):
         retv = child.poll()
         if retv:
             terminated.append(child)
-            print("Exited at {}, code: {}".format(time.clock_gettime(time.CLOCK_MONOTONIC_RAW), retv))
     for child in terminated:
         children.remove(child)
 
@@ -87,7 +86,6 @@ def remote_connect(profile):
     try:
         retv = conpro.communicate(None, timeout=0.5)
     except subprocess.TimeoutExpired:
-        print("Connected Sucessfully!")
         children.append(conpro)
         conpro.stdin.close()
     log.close()
@@ -247,12 +245,6 @@ class ConProfile(Gtk.Dialog):
     def radio_on_selected(self, rbtn):
         if rbtn.get_active():
             self.profile['proto'] = rbtn.get_label()
-        if self.profile['proto'] == "RDP":
-            self.port.set_text("3389")
-            self.optarg.set_text("/gfx /sound /cert-tofu")
-        elif self.profile['proto'] == "SPICE":
-            self.port.set_text("5900")
-            self.optarg.set_text("")
 
     def destroy(self):
         super().destroy()
@@ -277,9 +269,12 @@ class LIcon(Gtk.EventBox):
         image.set_from_file(self.profile['picture'])
         vbox.pack_start(image, False, False, 0)
         image.show()
-        label = Gtk.Label(label=self.sec)
-        vbox.pack_end(label, False, False, 0)
-        label.show()
+        self.label = Gtk.Label(label=self.sec)
+        vbox.pack_end(self.label, False, False, 0)
+        self.label.show()
+
+    def refresh_label(self):
+        self.label.set_text(self.sec)
 
     def on_event_press(self, ebox, event):
         if self.sec == proadd:
@@ -293,6 +288,8 @@ class LIcon(Gtk.EventBox):
                 if response == Gtk.ResponseType.OK:
                     if len(condial.sec) == 0:
                         errmsg = _("Missing Profile ID")
+                    elif condial.sec.upper() == 'DEFAULT':
+                        errmsg = _("Profile Name Cannot be set to 'DEFAULT'")
                     elif len(condial.profile['user']) == 0:
                         errmsg = _("Missing User Name")
                     elif len(condial.profile['ip']) == 0:
@@ -327,14 +324,19 @@ class LIcon(Gtk.EventBox):
                         errmsg = _("Missing User Name")
                     elif len(condial.profile['ip']) == 0:
                         errmsg = _("Missing Remote Host/IP")
-                    elif condial.sec != self.sec:
-                        errmsg = _("Profile Name Cannot Be Modified")
                     if len(errmsg) != 0:
                         ErrorMesg(errmsg)
                         return
                 
+                    if condial.sec != self.sec:
+                        self.mwin.conini[condial.sec] = {}
                     for key in condial.profile.keys():
                         self.mwin.conini[condial.sec][key] = condial.profile[key]
+                    if condial.sec != self.sec:
+                        self.mwin.conini.remove_section(self.sec)
+                        self.sec = condial.sec
+                        self.profile = self.mwin.conini[self.sec]
+                        self.refresh_label()
                     self.mwin.conmod = 1
 
 class MWin(Gtk.Window):
@@ -356,7 +358,6 @@ class MWin(Gtk.Window):
         try:
             pic = self.conini['DEFAULT']['picture']
         except:
-            print("Set DEFAULT to default")
             self.conini['DEFAULT']['picture'] = '512px-New_user_icon-01.png'
             self.conini['DEFAULT']['proto'] = 'SPICE'
             self.conini['DEFAULT']['port'] = '5900'
@@ -433,5 +434,4 @@ if win.conmod != 0:
         conini['DEFAULT']['picture'] = '512px-New_user_icon-01.png'
         conini.write(inif)
 
-print("Exit at: {}".format(time.clock_gettime(time.CLOCK_MONOTONIC_RAW)))
 sys.exit(0)
