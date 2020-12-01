@@ -6,6 +6,7 @@ import locale
 import gi
 import configparser
 import random
+import subprocess
 
 locale.setlocale(locale.LC_ALL, '')
 _ = gettext.gettext
@@ -16,14 +17,6 @@ from gi.repository import Gtk, GLib
 proto_cmd = {'RDP': 'xfreerdp', 'SPICE':None}
 proadd = _("Add Profile")
 
-#            fdialog = Gtk.FileChooserDialog(_("Please select an image"), self,
-#                    Gtk.FileChooserAction.OPEN,
-#                    (Gtk.STOCK_CANCEL, Gtk.ResponseType.CANCEL, Gtk.STOCK_OPEN, Gtk.ResponseType.OK))
-#        resp = fdialog.run()
-#        if resp == Gtk.ResponseType.OK:
-#            iconfile = fdialog.get_filename()
-#        else:
-#            iconfile = "./user-1.png"
 def DialogPassword():
     win = Gtk.Window()
     md = Gtk.Dialog(win, title=_("Please Input Password"), transient_for=win, flags=0)
@@ -35,9 +28,8 @@ def DialogPassword():
     box = md.get_content_area()
     box.add(passwd)
     passwd.show()
-
+    passwd.set_visibility(False)
     response = md.run()
-
     if response == Gtk.ResponseType.OK:
         pwdstr = passwd.get_text()
     else:
@@ -59,7 +51,8 @@ def remote_connect(profile):
     cmdlist.append(remote)
     user = "/u:"+profile['user']
     cmdlist.append(user)
-    cmdlist.append(profile['optarg'])
+    for itm in profile['optarg'].split():
+        cmdlist.append(itm)
     passwd = DialogPassword()
     if passwd == None:
         return
@@ -270,6 +263,29 @@ class LIcon(Gtk.EventBox):
         else:
             if event.button == 1:
                 remote_connect(self.profile)
+            else:
+                condial = ConProfile(self.sec, self.profile)
+                condial.resize(600, 400)
+                condial.show()
+                response = condial.run()
+                condial.destroy()
+                errmsg = ''
+                if response == Gtk.ResponseType.OK:
+                    if len(condial.sec) == 0:
+                        errmsg = _("Missing Profile ID")
+                    elif len(condial.profile['user']) == 0:
+                        errmsg = _("Missing User Name")
+                    elif len(condial.profile['ip']) == 0:
+                        errmsg = _("Missing Remote Host/IP")
+                    elif condial.sec != self.sec:
+                        errmsg = _("Profile Name Cannot Be Modified")
+                    if len(errmsg) != 0:
+                        ErrorMesg(errmsg)
+                        return
+                
+                    for key in condial.profile.keys():
+                        self.mwin.conini[condial.sec][key] = condial.profile[key]
+                    self.mwin.conmod = 1
 
 class MWin(Gtk.Window):
     def __init__(self, conini):
