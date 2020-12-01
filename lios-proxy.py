@@ -9,6 +9,7 @@ import random
 import subprocess
 import signal
 import time
+import threading
 
 locale.setlocale(locale.LC_ALL, '')
 _ = gettext.gettext
@@ -88,6 +89,7 @@ def remote_connect(profile):
     except subprocess.TimeoutExpired:
         print("Connected Sucessfully!")
         children.append(conpro)
+        conpro.stdin.close()
     log.close()
 
 def ErrorMesg(msg):
@@ -407,11 +409,24 @@ conini = configparser.ConfigParser()
 if os.path.isfile(confile):
     conini.read(confile)
 
+class UIThread(threading.Thread):
+    def __init__(self, win):
+        self.win = win
+        super().__init__(target=Gtk.main)
+        win.connect("destroy", Gtk.main_quit)
+        win.resize(800, 300)
+        win.show()
+
 win = MWin(conini)
-win.connect("destroy", Gtk.main_quit)
-win.resize(800, 300)
-win.show()
-Gtk.main()
+
+ui = UIThread(win)
+ui.start()
+
+alv = ui.is_alive()
+while alv:
+    time.sleep(1)
+    alv = ui.is_alive()
+ui.join()
 
 if win.conmod != 0:
     with open(confile, 'w') as inif:
