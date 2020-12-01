@@ -59,29 +59,31 @@ def DialogPassword():
     win.destroy()
     return pwdstr
 
+def rdpcmd_list(profile):
+    proto = profile['proto']
+    cmd = proto_cmd[proto]
+    cmdlist = [cmd]
+    remote = "/v:"+profile['ip']+":"+profile['port']
+    cmdlist.append(remote)
+    user = "/u:"+profile['user']
+    cmdlist.append(user)
+    for itm in profile['optarg'].split():
+        cmdlist.append(itm)
+    if profile['fullscreen'] == 'YES':
+        cmdlist.append('/f')
+    return cmdlist
+
 def remote_connect(profile):
     if profile['proto'] != "RDP":
         errmsg = _("Protocol ") + self.profile['proto'] + _(" Not Implemented")
         ErrorMesg(errmsg)
         return
-    proto = profile['proto']
-    cmd = proto_cmd[proto]
-    cmdlist = []
-    cmdlist.append(cmd)
-    remote = "/v:"+profile['ip']+":"+profile['port']
-    cmdlist.append(remote)
-    user = "/u:"+profile['user']
-    cmdlist.append(user)
-    if profile['fullscreen'] == 'YES':
-        cmdlist.append('/f')
-
-    for itm in profile['optarg'].split():
-        cmdlist.append(itm)
+    cmdlist = rdpcmd_list(profile)
     passwd = DialogPassword()
     if passwd == None:
         return
-    print(cmdlist)
     passwd += '\n'
+#    print(cmdlist)
     log = open(profile['logfile'], 'w+')
     conpro = subprocess.Popen(cmdlist, stdin=subprocess.PIPE, stdout=log, stderr=log,
             start_new_session=True)
@@ -103,14 +105,17 @@ def ErrorMesg(msg):
     win.destroy()
 
 class ConProfile(Gtk.Dialog):
-    def __init__(self, sec, profile):
+    def __init__(self, sec, profile, on_default=False):
         self.win = Gtk.Window()
         super().__init__(parent=win)
-        self.set_title(_("Add New Profile"))
+        title = sec
+        if on_default:
+            title = _("Add New Profile")
+        self.set_title(title)
         self.add_button(_("_OK"), Gtk.ResponseType.OK)
         self.add_button(_("_Cancel"), Gtk.ResponseType.CANCEL)
-        self.set_default_response(Gtk.ResponseType.OK)
         self.connect("response", self.on_response)
+        self.set_default_response(Gtk.ResponseType.OK)
         self.response = Gtk.ResponseType.CANCEL
         self.sec = ''
         self.profile = profile
@@ -243,6 +248,7 @@ class ConProfile(Gtk.Dialog):
         self.log.show()
 
     def on_response(self, dialog, response):
+        self.response = response
         if response == Gtk.ResponseType.CANCEL:
             return
 
@@ -296,7 +302,7 @@ class LIcon(Gtk.EventBox):
 
     def on_event_press(self, ebox, event):
         if self.sec == proadd:
-            condial = ConProfile('def', self.profile)
+            condial = ConProfile('def', self.profile, True)
             condial.resize(600, 400)
             condial.show()
             response = condial.run()
