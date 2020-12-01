@@ -7,12 +7,29 @@ import gi
 import configparser
 import random
 import subprocess
+import signal
+import time
 
 locale.setlocale(locale.LC_ALL, '')
 _ = gettext.gettext
 
 gi.require_version("Gtk", "3.0")
 from gi.repository import Gtk, GLib
+
+children = []
+def child_exited(sig, frame):
+    terminated = []
+    if sig != signal.SIGCHLD:
+        return
+    for child in children:
+        retv = child.poll()
+        if retv:
+            terminated.append(child)
+            print("Exited at {}, code: {}".format(time.clock_gettime(time.CLOCK_MONOTONIC_RAW), retv))
+    for child in terminated:
+        children.remove(child)
+
+signal.signal(signal.SIGCHLD, child_exited)
 
 proto_cmd = {'RDP': 'xfreerdp', 'SPICE':None}
 proadd = _("Add Profile")
@@ -24,11 +41,15 @@ def DialogPassword():
              Gtk.STOCK_OK, Gtk.ResponseType.OK, Gtk.STOCK_CANCEL, Gtk.ResponseType.CANCEL
              )
     md.resize(400, 50)
+    okButton = md.get_widget_for_response(response_id=Gtk.ResponseType.OK)
+    okButton.set_can_default(True)
+    okButton.grab_default()
     passwd = Gtk.Entry()
     box = md.get_content_area()
     box.add(passwd)
     passwd.show()
     passwd.set_visibility(False)
+    passwd.set_activates_default(True)
     response = md.run()
     if response == Gtk.ResponseType.OK:
         pwdstr = passwd.get_text()
@@ -56,8 +77,18 @@ def remote_connect(profile):
     passwd = DialogPassword()
     if passwd == None:
         return
-    cmdlist.append("/p:"+passwd)
     print(cmdlist)
+    passwd += '\n'
+    log = open(profile['logfile'], 'w+')
+    conpro = subprocess.Popen(cmdlist, stdin=subprocess.PIPE, stdout=log, stderr=log,
+            start_new_session=True)
+    conpro.stdin.write(passwd.encode('utf-8'))
+    try:
+        retv = conpro.communicate(None, timeout=0.5)
+    except subprocess.TimeoutExpired:
+        print("Connected Sucessfully!")
+        children.append(conpro)
+    log.close()
 
 def ErrorMesg(msg):
     win = Gtk.Window()
@@ -183,6 +214,22 @@ class ConProfile(Gtk.Dialog):
         elif proto == "RDP":
             rbtn2.set_active(True)
 
+        hbox = Gtk.Box()
+        hbox.set_homogeneous(False)
+        hbox.show()
+        self.vbox.pack_start(hbox, False, False, 5)
+        label = Gtk.Label(_("      log file:"))
+        hbox.add(label)
+        label.show()
+        self.log = Gtk.Entry()
+        try:
+            logfile = profile['logfile']
+        except:
+            logfile = '/tmp/connections.log'
+        self.log.set_text(logfile)
+        hbox.pack_start(self.log, True, True, 0)
+        self.log.show()
+
     def on_response(self, dialog, response):
         if response == Gtk.ResponseType.CANCEL:
             return
@@ -193,6 +240,7 @@ class ConProfile(Gtk.Dialog):
         self.profile['port'] = self.port.get_text()
         self.profile['optarg'] = self.optarg.get_text()
         self.profile['picture'] = "./user-" + str(random.randint(1,4)) + ".png"
+        self.profile['logfile'] = self.log.get_text()
 
     def radio_on_selected(self, rbtn):
         if rbtn.get_active():
@@ -370,4 +418,5 @@ if win.conmod != 0:
         conini['DEFAULT']['picture'] = '512px-New_user_icon-01.png'
         conini.write(inif)
 
+print("Exit at: {}".format(time.clock_gettime(time.CLOCK_MONOTONIC_RAW)))
 sys.exit(0)
