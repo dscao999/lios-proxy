@@ -295,10 +295,24 @@ class LIcon(Gtk.EventBox):
         vbox.pack_end(self.label, False, False, 0)
         self.label.show()
 
+        self.menu = Gtk.Menu()
+        mitem = Gtk.MenuItem(_("View/Edit"))
+        self.menu.append(mitem)
+        mitem.show()
+        mitem.connect("activate", self.view_edit_profile)
+        mitem = Gtk.MenuItem(_("Remove"))
+        self.menu.append(mitem)
+        mitem.show()
+        mitem.connect("activate", self.remove_item)
+
     def refresh_label(self):
         self.label.set_text(self.sec)
         self.image.set_from_file(self.profile['picture'])
         self.image.show()
+
+    def remove_item(self, data):
+        GLib.idle_add(self.mwin.remove_icon, self)
+        self.mwin.conmod = 1
 
     def add_one_profile(self, condial):
         errmsg = ''
@@ -319,7 +333,7 @@ class LIcon(Gtk.EventBox):
         GLib.idle_add(self.mwin.add_icon, condial.sec, condial.profile)
         self.mwin.conmod = 1
 
-    def view_edit_profile(self):
+    def view_edit_profile(self, data):
         condial = ConProfile(self.sec, self.profile)
         condial.resize(600, 400)
         condial.show()
@@ -365,7 +379,9 @@ class LIcon(Gtk.EventBox):
             if event.button == 1:
                 remote_connect(self.profile)
             elif event.button == 3:
-                self.view_edit_profile()
+                self.menu.show()
+                self.menu.popup(None, None, None, None, event.button, event.time)
+#                self.view_edit_profile()
 
 class MWin(Gtk.Window):
     def __init__(self, conini):
@@ -419,6 +435,11 @@ class MWin(Gtk.Window):
         icon = LIcon(self, sec)
         self.hbox.pack_start(icon, False, False, 8)
         icon.show()
+
+    def remove_icon(self, icon):
+        self.conini.remove_section(icon.sec)
+        self.hbox.remove(icon)
+        icon.destroy()
 
     def on_button_clicked(self, widget):
         if widget == self.rebbut:
