@@ -265,16 +265,18 @@ class LIcon(Gtk.EventBox):
         self.add(vbox)
         vbox.show()
 
-        image = Gtk.Image()
-        image.set_from_file(self.profile['picture'])
-        vbox.pack_start(image, False, False, 0)
-        image.show()
+        self.image = Gtk.Image()
+        self.image.set_from_file(self.profile['picture'])
+        vbox.pack_start(self.image, False, False, 0)
+        self.image.show()
         self.label = Gtk.Label(label=self.sec)
         vbox.pack_end(self.label, False, False, 0)
         self.label.show()
 
     def refresh_label(self):
         self.label.set_text(self.sec)
+        self.image.set_from_file(self.profile['picture'])
+        self.image.show()
 
     def on_event_press(self, ebox, event):
         if self.sec == proadd:
