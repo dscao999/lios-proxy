@@ -300,6 +300,54 @@ class LIcon(Gtk.EventBox):
         self.image.set_from_file(self.profile['picture'])
         self.image.show()
 
+    def add_one_profile(self, condial):
+        errmsg = ''
+        if len(condial.sec) == 0:
+            errmsg = _("Missing Profile ID")
+        elif condial.sec.upper() == 'DEFAULT':
+            errmsg = _("Profile Name Cannot be set to 'DEFAULT'")
+        elif len(condial.profile['user']) == 0:
+            errmsg = _("Missing User Name")
+        elif len(condial.profile['ip']) == 0:
+            errmsg = _("Missing Remote Host/IP")
+        elif condial.sec in self.mwin.conini.sections():
+            errmsg = _("Duplicate Profile Name")
+        if len(errmsg) != 0:
+            ErrorMesg(errmsg)
+            return
+                
+        GLib.idle_add(self.mwin.add_icon, condial.sec, condial.profile)
+        self.mwin.conmod = 1
+
+    def view_edit_profile(self):
+        condial = ConProfile(self.sec, self.profile)
+        condial.resize(600, 400)
+        condial.show()
+        response = condial.run()
+        condial.destroy()
+        errmsg = ''
+        if response == Gtk.ResponseType.OK:
+            if len(condial.sec) == 0:
+                errmsg = _("Missing Profile ID")
+            elif len(condial.profile['user']) == 0:
+                errmsg = _("Missing User Name")
+            elif len(condial.profile['ip']) == 0:
+                errmsg = _("Missing Remote Host/IP")
+            if len(errmsg) != 0:
+                ErrorMesg(errmsg)
+                return
+                
+            if condial.sec != self.sec:
+                self.mwin.conini[condial.sec] = {}
+            for key in condial.profile.keys():
+                self.mwin.conini[condial.sec][key] = condial.profile[key]
+            if condial.sec != self.sec:
+                self.mwin.conini.remove_section(self.sec)
+                self.sec = condial.sec
+                self.profile = self.mwin.conini[self.sec]
+                self.refresh_label()
+            self.mwin.conmod = 1
+
     def on_event_press(self, ebox, event):
         if self.sec == proadd:
             condial = ConProfile('Default', self.profile, True)
@@ -307,61 +355,17 @@ class LIcon(Gtk.EventBox):
             condial.show()
             response = condial.run()
             condial.destroy()
-            if event.button == 1:
-                errmsg = ''
-                if response == Gtk.ResponseType.OK:
-                    if len(condial.sec) == 0:
-                        errmsg = _("Missing Profile ID")
-                    elif condial.sec.upper() == 'DEFAULT':
-                        errmsg = _("Profile Name Cannot be set to 'DEFAULT'")
-                    elif len(condial.profile['user']) == 0:
-                        errmsg = _("Missing User Name")
-                    elif len(condial.profile['ip']) == 0:
-                        errmsg = _("Missing Remote Host/IP")
-                    elif condial.sec in self.mwin.conini.sections():
-                        errmsg = _("Duplicate Profile Name")
-                    if len(errmsg) != 0:
-                        ErrorMesg(errmsg)
-                        return
-                
-                    GLib.idle_add(self.mwin.add_icon, condial.sec, condial.profile)
-                    self.mwin.conmod = 1
-            elif event.button == 3:
-                if response == Gtk.ResponseType.OK:
-                    for key in condial.profile.keys():
-                        self.mwin.conini['DEFAULT'][key] = condial.profile[key]
-                    self.mwin.conmod = 1
+            if event.button == 1 and response == Gtk.ResponseType.OK:
+                self.add_one_profile(condial)
+            elif event.button == 3 and response == Gtk.ResponseType.OK:
+                for key in condial.profile.keys():
+                    self.mwin.conini['DEFAULT'][key] = condial.profile[key]
+                self.mwin.conmod = 1
         else:
             if event.button == 1:
                 remote_connect(self.profile)
-            else:
-                condial = ConProfile(self.sec, self.profile)
-                condial.resize(600, 400)
-                condial.show()
-                response = condial.run()
-                condial.destroy()
-                errmsg = ''
-                if response == Gtk.ResponseType.OK:
-                    if len(condial.sec) == 0:
-                        errmsg = _("Missing Profile ID")
-                    elif len(condial.profile['user']) == 0:
-                        errmsg = _("Missing User Name")
-                    elif len(condial.profile['ip']) == 0:
-                        errmsg = _("Missing Remote Host/IP")
-                    if len(errmsg) != 0:
-                        ErrorMesg(errmsg)
-                        return
-                
-                    if condial.sec != self.sec:
-                        self.mwin.conini[condial.sec] = {}
-                    for key in condial.profile.keys():
-                        self.mwin.conini[condial.sec][key] = condial.profile[key]
-                    if condial.sec != self.sec:
-                        self.mwin.conini.remove_section(self.sec)
-                        self.sec = condial.sec
-                        self.profile = self.mwin.conini[self.sec]
-                        self.refresh_label()
-                    self.mwin.conmod = 1
+            elif event.button == 3:
+                self.view_edit_profile()
 
 class MWin(Gtk.Window):
     def __init__(self, conini):
