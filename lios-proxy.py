@@ -72,6 +72,9 @@ def remote_connect(profile):
     cmdlist.append(remote)
     user = "/u:"+profile['user']
     cmdlist.append(user)
+    if profile['fullscreen'] == 'YES':
+        cmdlist.append('/f')
+
     for itm in profile['optarg'].split():
         cmdlist.append(itm)
     passwd = DialogPassword()
@@ -140,6 +143,15 @@ class ConProfile(Gtk.Dialog):
         rbtn2.connect("toggled", self.radio_on_selected)
         hbox.pack_start(rbtn2, True, True, 0)
         rbtn2.show()
+        self.screen = Gtk.CheckButton(label=_("Full Screen"))
+        hbox.pack_start(self.screen, True, True, 0)
+        self.screen.show()
+        try:
+            fullscreen = profile['fullscreen'].upper()
+        except:
+            fullscreen = 'NO'
+        if fullscreen == 'YES':
+            self.screen.set_active(True)
 
         hbox = Gtk.Box()
         hbox.set_homogeneous(False)
@@ -241,6 +253,10 @@ class ConProfile(Gtk.Dialog):
         self.profile['optarg'] = self.optarg.get_text()
         self.profile['picture'] = "./user-" + str(random.randint(1,4)) + ".png"
         self.profile['logfile'] = self.log.get_text()
+        if self.screen.get_active():
+            self.profile['fullscreen'] = 'YES'
+        else:
+            self.profile['fullscreen'] = 'NO'
 
     def radio_on_selected(self, rbtn):
         if rbtn.get_active():
