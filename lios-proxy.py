@@ -302,7 +302,7 @@ class LIcon(Gtk.EventBox):
 
     def on_event_press(self, ebox, event):
         if self.sec == proadd:
-            condial = ConProfile('def', self.profile, True)
+            condial = ConProfile('Default', self.profile, True)
             condial.resize(600, 400)
             condial.show()
             response = condial.run()
