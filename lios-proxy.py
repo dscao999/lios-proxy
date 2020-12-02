@@ -10,6 +10,7 @@ import subprocess
 import signal
 import time
 import threading
+import getopt
 
 locale.setlocale(locale.LC_ALL, '')
 _ = gettext.gettext
@@ -433,8 +434,13 @@ class MWin(Gtk.Window):
 
         self.shutbut = Gtk.Button(label=_("Shutdown"))
         self.shutbut.connect("clicked", self.on_button_clicked)
-        hbox.pack_end(self.shutbut, True, True, 0)
+        hbox.pack_start(self.shutbut, True, True, 0)
         self.shutbut.show()
+
+        self.logbut = Gtk.Button(label=_("Logout"))
+        self.logbut.connect("clicked", self.on_button_clicked)
+        hbox.pack_end(self.logbut, True, True, 0)
+        self.logbut.show()
 
     def add_icon(self, sec, profile):
         self.conini[sec] = profile
@@ -451,26 +457,41 @@ class MWin(Gtk.Window):
         if widget == self.rebbut:
             act = "--reboot"
         elif widget == self.shutbut:
-            act = "--shutdown"
+            act = "--halt"
+        elif widget == self.logbut:
+            act = "--logout"
         else:
             return
         Gtk.main_quit()
+        subprocess.Popen(["xfce4-session-logout", act], start_new_session=True)
 
-if len(sys.argv) > 1:
-    confile = sys.argv[1]
-else:
-    confile = os.environ['HOME'] + '/connections.ini'
+try:
+    opts, args = getopt.getopt(sys.argv[1:], "c:m", ["config=", "maximize"])
+except getopt.GetoptError:
+    print("Usage: {} [--maximize] [--config=config_file]".format(sys.argv[0]))
+    sys.exit(1)
 
+confile = os.environ['HOME'] + '/connections.ini'
+maximize = False
+for optval in opts:
+    if optval[0] == '-m' or optval[0] == '--maximize':
+        maximize = True
+    elif optval[0] == '-c' or optval[0] == '--config':
+        confile = optval[1]
+    
 conini = configparser.ConfigParser()
 if os.path.isfile(confile):
     conini.read(confile)
 
 class UIThread(threading.Thread):
     def __init__(self, win):
+        global maximize
+
         self.win = win
         super().__init__(target=Gtk.main)
         win.connect("destroy", Gtk.main_quit)
-        win.resize(800, 300)
+        if maximize:
+            win.maximize()
         win.show()
 
 win = MWin(conini)
