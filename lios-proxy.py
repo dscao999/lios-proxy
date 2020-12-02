@@ -19,6 +19,8 @@ from gi.repository import Gtk, GLib
 
 children = []
 def child_exited(sig, frame):
+    global children
+
     terminated = []
     if sig != signal.SIGCHLD:
         return
@@ -74,6 +76,8 @@ def rdpcmd_list(profile):
     return cmdlist
 
 def remote_connect(profile):
+    global children
+
     if profile['proto'] != "RDP":
         errmsg = _("Protocol ") + self.profile['proto'] + _(" Not Implemented")
         ErrorMesg(errmsg)
@@ -83,8 +87,8 @@ def remote_connect(profile):
     if passwd == None:
         return
     passwd += '\n'
-#    print(cmdlist)
-    log = open(profile['logfile'], 'w+')
+    print(cmdlist)
+    log = open(profile['logfile'], 'a')
     conpro = subprocess.Popen(cmdlist, stdin=subprocess.PIPE, stdout=log, stderr=log,
             start_new_session=True)
     conpro.stdin.write(passwd.encode('utf-8'))
