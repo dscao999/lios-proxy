@@ -393,6 +393,8 @@ class MWin(Gtk.Window):
         self.conini = conini;
         self.conmod = 0
 
+        self.set_icon_from_file("./icon-lios.svg")
+
         vbox = Gtk.VBox()
         vbox.set_homogeneous(False)
         self.add(vbox)
