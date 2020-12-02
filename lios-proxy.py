@@ -11,6 +11,7 @@ import signal
 import time
 import threading
 import getopt
+import getpass
 
 locale.setlocale(locale.LC_ALL, '')
 _ = gettext.gettext
@@ -89,7 +90,7 @@ def remote_connect(profile):
         return
     passwd += '\n'
     print(cmdlist)
-    log = open(profile['logfile'], 'a')
+    log = open(profile['logfile']+'.'+getpass.getuser(), 'a')
     conpro = subprocess.Popen(cmdlist, stdin=subprocess.PIPE, stdout=log, stderr=log,
             start_new_session=True)
     conpro.stdin.write(passwd.encode('utf-8'))
