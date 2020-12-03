@@ -464,25 +464,34 @@ class MWin(Gtk.Window):
         else:
             return
         Gtk.main_quit()
-        subprocess.Popen(["xfce4-session-logout", act], start_new_session=True)
+        try:
+            subprocess.Popen(["xfce4-session-logout", act], start_new_session=True)
+        except:
+            print("Cannot execute the command: xfce4-session-logout")
 
 try:
-    opts, args = getopt.getopt(sys.argv[1:], "c:m", ["config=", "maximize"])
+    opts, args = getopt.getopt(sys.argv[1:], "c:m", ["config=", "maximize", "no-quit"])
 except getopt.GetoptError:
-    print("Usage: {} [--maximize] [--config=config_file]".format(sys.argv[0]))
+    print("Usage: {} [--maximize] [--config=config_file] [--no-quit]".format(sys.argv[0]))
     sys.exit(1)
 
 confile = os.environ['HOME'] + '/connections.ini'
 maximize = False
+noquit = False
 for optval in opts:
     if optval[0] == '-m' or optval[0] == '--maximize':
         maximize = True
     elif optval[0] == '-c' or optval[0] == '--config':
         confile = optval[1]
+    elif optval[0] == '--no-quit':
+        noquit = True
     
 conini = configparser.ConfigParser()
 if os.path.isfile(confile):
     conini.read(confile)
+
+def stop_quit(widget, event):
+    return True
 
 class UIThread(threading.Thread):
     def __init__(self, win):
@@ -490,12 +499,15 @@ class UIThread(threading.Thread):
 
         self.win = win
         super().__init__(target=Gtk.main)
-        win.connect("destroy", Gtk.main_quit)
         if maximize:
             win.maximize()
         win.show()
 
 win = MWin(conini)
+if noquit:
+    win.connect("delete-event", stop_quit)
+else:
+    win.connect("destroy", Gtk.main_quit)
 
 ui = UIThread(win)
 ui.start()
