@@ -438,6 +438,11 @@ class MWin(Gtk.Window):
         hbox.pack_start(self.shutbut, True, True, 0)
         self.shutbut.show()
 
+        self.extbut = Gtk.Button(label=_("Exit"))
+        self.extbut.connect("clicked", self.on_button_clicked)
+        hbox.pack_start(self.extbut, True, True, 0)
+        self.extbut.show()
+
         self.logbut = Gtk.Button(label=_("Logout"))
         self.logbut.connect("clicked", self.on_button_clicked)
         hbox.pack_end(self.logbut, True, True, 0)
@@ -455,12 +460,16 @@ class MWin(Gtk.Window):
         icon.destroy()
 
     def on_button_clicked(self, widget):
+        global noquit
         if widget == self.rebbut:
             act = "--reboot"
         elif widget == self.shutbut:
             act = "--halt"
         elif widget == self.logbut:
             act = "--logout"
+        elif widget == self.extbut and not noquit:
+            Gtk.main_quit()
+            return
         else:
             return
         Gtk.main_quit()
@@ -500,7 +509,7 @@ class UIThread(threading.Thread):
         self.win = win
         super().__init__(target=Gtk.main)
         if maximize:
-            win.maximize()
+            win.fullscreen()
         win.show()
 
 win = MWin(conini)
