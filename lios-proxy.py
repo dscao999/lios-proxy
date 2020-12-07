@@ -255,7 +255,10 @@ class ConProfile(Gtk.Dialog):
         except:
             logfile = ''
         if len(logfile) == 0:
-            logfile = os.environ['HOME'] + '/' + sec.replace('/', '-') + '-connections.log'
+            logfile = os.environ['HOME'] + '/' + sec.replace('/', '-') + '-conn.log'
+        if on_default:
+            logfile = ''
+            self.log.set_editable(False)
         self.log.set_text(logfile)
         hbox.pack_start(self.log, True, True, 0)
         self.log.show()
@@ -348,7 +351,6 @@ class LIcon(Gtk.EventBox):
 
     def view_edit_profile(self, data):
         condial = ConProfile(self.sec, self.profile)
-        condial.resize(600, 400)
         condial.show()
         response = condial.run()
         condial.destroy()
@@ -383,7 +385,6 @@ class LIcon(Gtk.EventBox):
                 return
             if self.sec == proadd:
                 condial = ConProfile('Default', self.profile, True)
-                condial.resize(600, 400)
                 condial.show()
                 response = condial.run()
                 condial.destroy()
@@ -396,8 +397,7 @@ class LIcon(Gtk.EventBox):
                 self.menu.show()
                 self.menu.popup(None, None, None, None, event.button, event.time)
             else:
-                condial = ConProfile('DEFAULT', self.profile)
-                condial.resize(600, 400)
+                condial = ConProfile('DEFAULT', self.profile, True)
                 condial.show()
                 response = condial.run()
                 condial.destroy()
@@ -427,7 +427,7 @@ class MWin(Gtk.Window):
         try:
             pic = self.conini['DEFAULT']['picture']
         except:
-            self.conini['DEFAULT']['picture'] = '512px-New_user_icon-01.png'
+            self.conini['DEFAULT']['picture'] = 'user-add.png'
             self.conini['DEFAULT']['proto'] = 'SPICE'
             self.conini['DEFAULT']['port'] = '5900'
             self.conmod = 1
@@ -449,11 +449,6 @@ class MWin(Gtk.Window):
         self.extbut.connect("clicked", self.on_button_clicked)
         hbox.pack_start(self.extbut, True, True, 0)
         self.extbut.show()
-
-        self.logbut = Gtk.Button(label=_("Logout"))
-        self.logbut.connect("clicked", self.on_button_clicked)
-        hbox.pack_start(self.logbut, True, True, 0)
-        self.logbut.show()
 
         self.rebbut = Gtk.Button(label=_("Reboot"))
         self.rebbut.connect("clicked", self.on_button_clicked)
@@ -482,14 +477,14 @@ class MWin(Gtk.Window):
             act = "--reboot"
         elif widget == self.shutbut:
             act = "--halt"
-        elif widget == self.logbut:
-            act = "--logout"
-        elif widget == self.extbut and not noquit:
-            Gtk.main_quit()
-            return
-        else:
-            return
+        elif widget == self.extbut:
+            if noquit:
+                act = "--logout"
+            else:
+                act = "--exit"
         Gtk.main_quit()
+        if act == "--exit":
+            return
         try:
             subprocess.Popen(["xfce4-session-logout", act], start_new_session=True)
         except:
@@ -540,14 +535,14 @@ ui.start()
 
 alv = ui.is_alive()
 while alv and global_exit == 0:
-    time.sleep(1)
+    time.sleep(0.2)
     alv = ui.is_alive()
 if global_exit == 0:
     ui.join()
 
 if win.conmod != 0:
     with open(confile, 'w') as inif:
-        conini['DEFAULT']['picture'] = '512px-New_user_icon-01.png'
+        conini['DEFAULT']['picture'] = 'user-add.png'
         conini.write(inif)
 
 sys.exit(0)
