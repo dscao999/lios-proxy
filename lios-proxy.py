@@ -19,12 +19,17 @@ _ = gettext.gettext
 gi.require_version("Gtk", "3.0")
 from gi.repository import Gtk, GLib
 
+global_exit = 0
 children = []
+
 def child_exited(sig, frame):
-    global children
+    global children, global_exit
 
     terminated = []
-    if sig != signal.SIGCHLD:
+    if sig == signal.SIGINT or sig == signal.SIGTERM:
+        global_exit = 1
+        return
+    elif sig != signal.SIGCHLD:
         return
     for child in children:
         retv = child.poll()
@@ -522,10 +527,11 @@ ui = UIThread(win)
 ui.start()
 
 alv = ui.is_alive()
-while alv:
+while alv and global_exit == 0:
     time.sleep(1)
     alv = ui.is_alive()
-ui.join()
+if global_exit == 0:
+    ui.join()
 
 if win.conmod != 0:
     with open(confile, 'w') as inif:
