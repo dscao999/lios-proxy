@@ -17,7 +17,7 @@ locale.setlocale(locale.LC_ALL, '')
 _ = gettext.gettext
 
 gi.require_version("Gtk", "3.0")
-from gi.repository import Gtk, GLib
+from gi.repository import Gtk, Gdk, GLib
 
 global_exit = 0
 children = []
@@ -253,7 +253,9 @@ class ConProfile(Gtk.Dialog):
         try:
             logfile = profile['logfile']
         except:
-            logfile = '/tmp/connections.log'
+            logfile = ''
+        if len(logfile) == 0:
+            logfile = os.environ['HOME'] + '/' + sec.replace('/', '-') + '-connections.log'
         self.log.set_text(logfile)
         hbox.pack_start(self.log, True, True, 0)
         self.log.show()
@@ -374,25 +376,35 @@ class LIcon(Gtk.EventBox):
             self.mwin.conmod = 1
 
     def on_event_press(self, ebox, event):
-        if self.sec == proadd:
-            condial = ConProfile('Default', self.profile, True)
-            condial.resize(600, 400)
-            condial.show()
-            response = condial.run()
-            condial.destroy()
-            if event.button == 1 and response == Gtk.ResponseType.OK:
-                self.add_one_profile(condial)
-            elif event.button == 3 and response == Gtk.ResponseType.OK:
-                for key in condial.profile.keys():
-                    self.mwin.conini['DEFAULT'][key] = condial.profile[key]
-                self.mwin.conmod = 1
-        else:
-            if event.button == 1:
+        global proadd
+
+        if event.button == 1:
+            if event.type != Gdk.EventType.DOUBLE_BUTTON_PRESS:
+                return
+            if self.sec == proadd:
+                condial = ConProfile('Default', self.profile, True)
+                condial.resize(600, 400)
+                condial.show()
+                response = condial.run()
+                condial.destroy()
+                if response == Gtk.ResponseType.OK:
+                    self.add_one_profile(condial)
+            else:
                 remote_connect(self.profile)
-            elif event.button == 3:
+        elif event.button == 3:
+            if self.sec != proadd:
                 self.menu.show()
                 self.menu.popup(None, None, None, None, event.button, event.time)
-#                self.view_edit_profile()
+            else:
+                condial = ConProfile('DEFAULT', self.profile)
+                condial.resize(600, 400)
+                condial.show()
+                response = condial.run()
+                condial.destroy()
+                if response == Gtk.ResponseType.OK:
+                    for key in condial.profile.keys():
+                        self.mwin.conini['DEFAULT'][key] = condial.profile[key]
+                    self.mwin.conmod = 1
 
 class MWin(Gtk.Window):
     def __init__(self, conini):
@@ -433,16 +445,6 @@ class MWin(Gtk.Window):
         vbox.pack_end(hbox, False, False, 0)
         hbox.show()
 
-        self.rebbut = Gtk.Button(label=_("Reboot"))
-        self.rebbut.connect("clicked", self.on_button_clicked)
-        hbox.pack_start(self.rebbut, True, True, 0)
-        self.rebbut.show()
-
-        self.shutbut = Gtk.Button(label=_("Shutdown"))
-        self.shutbut.connect("clicked", self.on_button_clicked)
-        hbox.pack_start(self.shutbut, True, True, 0)
-        self.shutbut.show()
-
         self.extbut = Gtk.Button(label=_("Exit"))
         self.extbut.connect("clicked", self.on_button_clicked)
         hbox.pack_start(self.extbut, True, True, 0)
@@ -450,8 +452,18 @@ class MWin(Gtk.Window):
 
         self.logbut = Gtk.Button(label=_("Logout"))
         self.logbut.connect("clicked", self.on_button_clicked)
-        hbox.pack_end(self.logbut, True, True, 0)
+        hbox.pack_start(self.logbut, True, True, 0)
         self.logbut.show()
+
+        self.rebbut = Gtk.Button(label=_("Reboot"))
+        self.rebbut.connect("clicked", self.on_button_clicked)
+        hbox.pack_start(self.rebbut, True, True, 0)
+        self.rebbut.show()
+
+        self.shutbut = Gtk.Button(label=_("Shutdown"))
+        self.shutbut.connect("clicked", self.on_button_clicked)
+        hbox.pack_end(self.shutbut, True, True, 0)
+        self.shutbut.show()
 
     def add_icon(self, sec, profile):
         self.conini[sec] = profile
