@@ -1,0 +1,12 @@
+Package: lios-connect-proxy
+Source: lios-connect-proxy
+Version: 0.1-1
+Architecture: all
+Maintainer: LIOS VDI Connector Proxy <caods1@lenovo.com>
+Installed-Size: 220
+Depends: python3-gi
+Section: lenovo/misc
+Priority: optional
+Homepage: https://crsvdi.lenovo.com
+Description: Connector Proxy for VDI protocols
+ Proxy for connections through various VDI protocols
