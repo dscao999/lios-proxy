@@ -21,6 +21,7 @@ from gi.repository import Gtk, Gdk, GLib
 
 global_exit = 0
 children = []
+impath = '/usr/share/pixmaps/lproxy/'
 
 def child_exited(sig, frame):
     global children, global_exit
@@ -86,7 +87,7 @@ def remote_connect(profile):
     global children
 
     if profile['proto'] != "RDP":
-        errmsg = _("Protocol ") + self.profile['proto'] + _(" Not Implemented")
+        errmsg = _("Protocol ") + profile['proto'] + _(" Not Implemented")
         ErrorMesg(errmsg)
         return
     cmdlist = rdpcmd_list(profile)
@@ -264,6 +265,8 @@ class ConProfile(Gtk.Dialog):
         self.log.show()
 
     def on_response(self, dialog, response):
+        global impath
+
         self.response = response
         if response == Gtk.ResponseType.CANCEL:
             return
@@ -273,7 +276,7 @@ class ConProfile(Gtk.Dialog):
         self.profile['user'] = self.user.get_text()
         self.profile['port'] = self.port.get_text()
         self.profile['optarg'] = self.optarg.get_text()
-        self.profile['picture'] = "./user-" + str(random.randint(1,4)) + ".png"
+        self.profile['picture'] = impath + "user-" + str(random.randint(1,4)) + ".png"
         self.profile['logfile'] = self.log.get_text()
         if self.screen.get_active():
             self.profile['fullscreen'] = 'YES'
@@ -408,11 +411,13 @@ class LIcon(Gtk.EventBox):
 
 class MWin(Gtk.Window):
     def __init__(self, conini):
+        global impath
+
         super().__init__(title=_("Connection Profiles"))
         self.conini = conini;
         self.conmod = 0
 
-        self.set_icon_from_file("./icon-lios.svg")
+        self.set_icon_from_file(impath + "lproxy-icon.svg")
 
         vbox = Gtk.VBox()
         vbox.set_homogeneous(False)
@@ -427,7 +432,7 @@ class MWin(Gtk.Window):
         try:
             pic = self.conini['DEFAULT']['picture']
         except:
-            self.conini['DEFAULT']['picture'] = 'user-add.png'
+            self.conini['DEFAULT']['picture'] = impath + 'user-add.png'
             self.conini['DEFAULT']['proto'] = 'SPICE'
             self.conini['DEFAULT']['port'] = '5900'
             self.conmod = 1
@@ -496,6 +501,10 @@ except getopt.GetoptError:
     print("Usage: {} [--maximize] [--config=config_file] [--no-quit]".format(sys.argv[0]))
     sys.exit(1)
 
+exefile = sys.argv[0]
+if os.path.islink(exefile):
+    impath = os.getcwd() + '/debpot' + impath
+
 confile = os.environ['HOME'] + '/connections.ini'
 maximize = False
 noquit = False
@@ -542,7 +551,7 @@ if global_exit == 0:
 
 if win.conmod != 0:
     with open(confile, 'w') as inif:
-        conini['DEFAULT']['picture'] = 'user-add.png'
+        conini['DEFAULT']['picture'] = impath + 'user-add.png'
         conini.write(inif)
 
 sys.exit(0)
