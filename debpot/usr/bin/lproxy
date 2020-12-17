@@ -310,9 +310,10 @@ class LIcon(Gtk.EventBox):
         self.image.set_from_file(self.profile['picture'])
         vbox.pack_start(self.image, False, False, 0)
         self.image.show()
-        self.label = Gtk.Label(label=self.sec)
-        vbox.pack_end(self.label, False, False, 0)
-        self.label.show()
+        self.button = Gtk.Button(label=self.sec)
+        self.button.connect("clicked", self.button_clicked)
+        vbox.pack_end(self.button, False, False, 0)
+        self.button.show()
 
         self.menu = Gtk.Menu()
         mitem = Gtk.MenuItem(label=_("View/Edit"))
@@ -379,6 +380,18 @@ class LIcon(Gtk.EventBox):
                 self.profile = self.mwin.conini[self.sec]
                 self.refresh_label()
             self.mwin.conmod = 1
+
+    def button_clicked(self, widget):
+        global proadd
+        if self.sec == proadd:
+            condial = ConProfile('Default', self.profile, True)
+            condial.show()
+            response = condial.run()
+            condial.destroy()
+            if response == Gtk.ResponseType.OK:
+                self.add_one_profile(condial)
+        else:
+            remote_connect(self.profile)
 
     def on_event_press(self, ebox, event):
         global proadd
