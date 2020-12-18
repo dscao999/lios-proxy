@@ -229,6 +229,22 @@ class ConProfile(Gtk.Dialog):
         hbox.set_homogeneous(False)
         hbox.show()
         self.vbox.pack_start(hbox, False, False, 5)
+        label = Gtk.Label(label=_("Domain Name:"))
+        hbox.add(label)
+        label.show()
+        self.domain = Gtk.Entry()
+        try:
+            domain = profile['domain']
+        except:
+            domain = ''
+        self.domain.set_text(domain)
+        hbox.pack_start(self.domain, True, True, 0)
+        self.domain.show()
+
+        hbox = Gtk.Box()
+        hbox.set_homogeneous(False)
+        hbox.show()
+        self.vbox.pack_start(hbox, False, False, 5)
         label = Gtk.Label(label=_("option arg:"))
         hbox.add(label)
         label.show()
@@ -278,6 +294,7 @@ class ConProfile(Gtk.Dialog):
         self.sec = self.id.get_text()
         self.profile['ip'] = self.ip.get_text()
         self.profile['user'] = self.user.get_text()
+        self.profile['domain'] = self.domain.get_text()
         self.profile['port'] = self.port.get_text()
         self.profile['optarg'] = self.optarg.get_text()
         self.profile['picture'] = impath + "user-" + str(random.randint(1,4)) + ".png"
