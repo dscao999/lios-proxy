@@ -42,7 +42,7 @@ def child_exited(sig, frame):
 signal.signal(signal.SIGCHLD, child_exited)
 
 proto_cmd = {'RDP': 'xfreerdp', 'SPICE':None}
-proadd = _("Add Profile")
+proadd = "DEFAULT"
 
 def DialogPassword():
     win = Gtk.Window()
@@ -117,12 +117,16 @@ def ErrorMesg(msg):
     win.destroy()
 
 class ConProfile(Gtk.Dialog):
-    def __init__(self, sec, profile, on_default=False):
+    def __init__(self, sec, profile, edit=False):
         self.win = Gtk.Window()
         super().__init__(parent=win)
+        on_default = sec == 'DEFAULT'
         title = sec
         if on_default:
-            title = _("Add New Profile")
+            if edit:
+                title = _("Edit Default Profile")
+            else:
+                title = _("Add New Profile")
         self.set_title(title)
         self.add_button(_("_OK"), Gtk.ResponseType.OK)
         self.add_button(_("_Cancel"), Gtk.ResponseType.CANCEL)
@@ -353,11 +357,15 @@ class LIcon(Gtk.EventBox):
         GLib.idle_add(self.mwin.add_icon, condial.sec, condial.profile)
         self.mwin.conmod = 1
 
-    def view_edit_profile(self, data):
-        condial = ConProfile(self.sec, self.profile)
+    def pop_dialog(self, edit=False):
+        condial = ConProfile(self.sec, self.profile, edit)
         condial.show()
         response = condial.run()
         condial.destroy()
+        return (condial, response)
+
+    def view_edit_profile(self, data):
+        (condial, response) = self.pop_dialog()
         errmsg = ''
         if response == Gtk.ResponseType.OK:
             if len(condial.sec) == 0:
@@ -384,10 +392,7 @@ class LIcon(Gtk.EventBox):
     def button_clicked(self, widget):
         global proadd
         if self.sec == proadd:
-            condial = ConProfile('Default', self.profile, True)
-            condial.show()
-            response = condial.run()
-            condial.destroy()
+            (condial, response) = self.pop_dialog()
             if response == Gtk.ResponseType.OK:
                 self.add_one_profile(condial)
         else:
@@ -400,10 +405,7 @@ class LIcon(Gtk.EventBox):
             if event.type != Gdk.EventType.DOUBLE_BUTTON_PRESS:
                 return
             if self.sec == proadd:
-                condial = ConProfile('Default', self.profile, True)
-                condial.show()
-                response = condial.run()
-                condial.destroy()
+                (condial, response) = self.pop_dialog()
                 if response == Gtk.ResponseType.OK:
                     self.add_one_profile(condial)
             else:
@@ -413,10 +415,7 @@ class LIcon(Gtk.EventBox):
                 self.menu.show()
                 self.menu.popup(None, None, None, None, event.button, event.time)
             else:
-                condial = ConProfile('DEFAULT', self.profile, True)
-                condial.show()
-                response = condial.run()
-                condial.destroy()
+                (condial, response) = self.pop_dialog(True)
                 if response == Gtk.ResponseType.OK:
                     for key in condial.profile.keys():
                         self.mwin.conini['DEFAULT'][key] = condial.profile[key]
