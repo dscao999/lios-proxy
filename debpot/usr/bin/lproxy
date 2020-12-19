@@ -136,26 +136,29 @@ class ConProfile(Gtk.Dialog):
         self.sec = ''
         self.profile = profile
 
-        hbox = Gtk.Box()
-        hbox.set_homogeneous(False)
-        hbox.show()
-        self.vbox.add(hbox)
-        label = Gtk.Label(label=_("   Profile ID:"))
-        hbox.add(label)
+        grid = Gtk.Grid()
+        grid.set_row_homogeneous(True)
+        grid.set_column_homogeneous(False)
+        grid.show()
+        self.vbox.add(grid)
+
+        label = Gtk.Label(label=_("Profile ID:"))
+        label.set_xalign(1.0)
+        grid.attach(label, 0, 0, 1, 1)
         label.show()
         self.id = Gtk.Entry()
         self.id.set_text(sec)
         self.id.set_max_length(48)
-        hbox.pack_start(self.id, True, True, 0)
+        grid.attach(self.id, 1, 0, 1, 1)
         self.id.show()
 
-        hbox = Gtk.Box()
-        hbox.set_homogeneous(False)
-        hbox.show()
-        self.vbox.pack_start(hbox, False, False, 15)
-        label = Gtk.Label(label=_("     Protocol:"))
-        hbox.add(label)
+        label = Gtk.Label(label=_("Protocol:"))
+        label.set_xalign(1.0)
+        grid.attach(label, 0, 1, 1, 1)
         label.show()
+        hbox = Gtk.Box()
+        grid.attach(hbox, 1, 1, 1, 1)
+        hbox.show()
         rbtn1 = Gtk.RadioButton(label=_("SPICE"))
         rbtn1.connect("toggled", self.radio_on_selected)
         hbox.pack_start(rbtn1, True, True, 20)
@@ -174,12 +177,9 @@ class ConProfile(Gtk.Dialog):
         if fullscreen == 'YES':
             self.screen.set_active(True)
 
-        hbox = Gtk.Box()
-        hbox.set_homogeneous(False)
-        hbox.show()
-        self.vbox.pack_start(hbox, False, False, 5)
-        label = Gtk.Label(label=_(" Remote IP:"))
-        hbox.add(label)
+        label = Gtk.Label(label=_("Remote IP:"))
+        label.set_xalign(1.0)
+        grid.attach(label, 0, 2, 1, 1)
         label.show()
         self.ip = Gtk.Entry()
         try:
@@ -187,15 +187,12 @@ class ConProfile(Gtk.Dialog):
         except:
             ipaddr = ''
         self.ip.set_text(ipaddr)
-        hbox.pack_start(self.ip, True, True, 0)
+        grid.attach(self.ip, 1, 2, 1, 1)
         self.ip.show()
 
-        hbox = Gtk.Box()
-        hbox.set_homogeneous(False)
-        hbox.show()
-        self.vbox.pack_start(hbox, False, False, 5)
-        label = Gtk.Label(label=_("           Port:"))
-        hbox.add(label)
+        label = Gtk.Label(label=_("Port:"))
+        label.set_xalign(1.0)
+        grid.attach(label, 0, 3, 1, 1)
         label.show()
         self.port = Gtk.Entry()
         try:
@@ -206,15 +203,12 @@ class ConProfile(Gtk.Dialog):
             elif profile['proto'] == "RD":
                 port = "3389"
         self.port.set_text(port)
-        hbox.pack_start(self.port, True, True, 0)
+        grid.attach(self.port, 1, 3, 1, 1)
         self.port.show()
 
-        hbox = Gtk.Box()
-        hbox.set_homogeneous(False)
-        hbox.show()
-        self.vbox.pack_start(hbox, False, False, 5)
         label = Gtk.Label(label=_("User Name:"))
-        hbox.add(label)
+        label.set_xalign(1.0)
+        grid.attach(label, 0, 4, 1, 1)
         label.show()
         self.user = Gtk.Entry()
         try:
@@ -222,15 +216,12 @@ class ConProfile(Gtk.Dialog):
         except:
             username = ''
         self.user.set_text(username)
-        hbox.pack_start(self.user, True, True, 0)
+        grid.attach(self.user, 1, 4, 1, 1)
         self.user.show()
 
-        hbox = Gtk.Box()
-        hbox.set_homogeneous(False)
-        hbox.show()
-        self.vbox.pack_start(hbox, False, False, 5)
         label = Gtk.Label(label=_("Domain Name:"))
-        hbox.add(label)
+        label.set_xalign(1.0)
+        grid.attach(label, 0, 5, 1, 1)
         label.show()
         self.domain = Gtk.Entry()
         try:
@@ -238,15 +229,12 @@ class ConProfile(Gtk.Dialog):
         except:
             domain = ''
         self.domain.set_text(domain)
-        hbox.pack_start(self.domain, True, True, 0)
+        grid.attach(self.domain, 1, 5, 1, 1)
         self.domain.show()
 
-        hbox = Gtk.Box()
-        hbox.set_homogeneous(False)
-        hbox.show()
-        self.vbox.pack_start(hbox, False, False, 5)
         label = Gtk.Label(label=_("option arg:"))
-        hbox.add(label)
+        label.set_xalign(1.0)
+        grid.attach(label, 0, 6, 1, 1)
         label.show()
         self.optarg = Gtk.Entry()
         try:
@@ -254,7 +242,7 @@ class ConProfile(Gtk.Dialog):
         except:
             optarg = ''
         self.optarg.set_text(optarg)
-        hbox.pack_start(self.optarg, True, True, 0)
+        grid.attach(self.optarg, 1, 6, 1, 1)
         self.optarg.show()
 
         proto = profile['proto']
@@ -263,12 +251,9 @@ class ConProfile(Gtk.Dialog):
         elif proto == "RDP":
             rbtn2.set_active(True)
 
-        hbox = Gtk.Box()
-        hbox.set_homogeneous(False)
-        hbox.show()
-        self.vbox.pack_start(hbox, False, False, 5)
-        label = Gtk.Label(label=_("      log file:"))
-        hbox.add(label)
+        label = Gtk.Label(label=_("log file:"))
+        label.set_xalign(1.0)
+        grid.attach(label, 0, 7, 1, 1)
         label.show()
         self.log = Gtk.Entry()
         try:
@@ -281,7 +266,7 @@ class ConProfile(Gtk.Dialog):
             logfile = ''
             self.log.set_editable(False)
         self.log.set_text(logfile)
-        hbox.pack_start(self.log, True, True, 0)
+        grid.attach(self.log, 1, 7, 1, 1)
         self.log.show()
 
     def on_response(self, dialog, response):
