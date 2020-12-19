@@ -319,8 +319,10 @@ class LIcon(Gtk.EventBox):
         self.sec = sec
         if sec != proadd:
             self.profile = win.conini[sec]
+            btnlabel = sec
         else:
             self.profile = win.conini['DEFAULT']
+            btnlabel = _("Add Profile")
         self.connect("button-press-event", self.on_event_press)
         vbox = Gtk.VBox()
         vbox.set_homogeneous(False)
@@ -331,7 +333,7 @@ class LIcon(Gtk.EventBox):
         self.image.set_from_file(self.profile['picture'])
         vbox.pack_start(self.image, False, False, 0)
         self.image.show()
-        self.button = Gtk.Button(label=self.sec)
+        self.button = Gtk.Button(label=btnlabel)
         self.button.connect("clicked", self.button_clicked)
         vbox.pack_end(self.button, False, False, 0)
         self.button.show()
