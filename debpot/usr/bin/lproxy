@@ -20,6 +20,7 @@ gi.require_version("Gtk", "3.0")
 from gi.repository import Gtk, Gdk, GLib
 
 global_exit = 0
+no_edit = False
 children = []
 impath = '/usr/share/pixmaps/lproxy/'
 
@@ -75,7 +76,10 @@ def rdpcmd_list(profile):
     cmdlist = [cmd]
     remote = "/v:"+profile['ip']+":"+profile['port']
     cmdlist.append(remote)
-    user = "/u:"+profile['user']
+    if len(profile['domain']) > 0:
+        user = '/u:' + profile['domain'] + ':' + profile['user']
+    else:
+        user = '/u:' + profile['user']
     cmdlist.append(user)
     for itm in profile['optarg'].split():
         cmdlist.append(itm)
@@ -118,6 +122,8 @@ def ErrorMesg(msg):
 
 class ConProfile(Gtk.Dialog):
     def __init__(self, sec, profile, edit=False):
+        global no_edit
+
         self.win = Gtk.Window()
         super().__init__(parent=win)
         on_default = sec == 'DEFAULT'
@@ -150,6 +156,7 @@ class ConProfile(Gtk.Dialog):
         self.id.set_text(sec)
         self.id.set_max_length(48)
         grid.attach(self.id, 1, 0, 1, 1)
+        self.id.set_editable(not no_edit)
         self.id.show()
 
         label = Gtk.Label(label=_("Protocol:"))
@@ -176,6 +183,9 @@ class ConProfile(Gtk.Dialog):
             fullscreen = 'NO'
         if fullscreen == 'YES':
             self.screen.set_active(True)
+        rbtn1.set_sensitive(not no_edit)
+        rbtn2.set_sensitive(not no_edit)
+        self.screen.set_sensitive(not no_edit)
 
         label = Gtk.Label(label=_("Remote IP:"))
         label.set_xalign(1.0)
@@ -188,6 +198,7 @@ class ConProfile(Gtk.Dialog):
             ipaddr = ''
         self.ip.set_text(ipaddr)
         grid.attach(self.ip, 1, 2, 1, 1)
+        self.ip.set_editable(not no_edit)
         self.ip.show()
 
         label = Gtk.Label(label=_("Port:"))
@@ -204,6 +215,7 @@ class ConProfile(Gtk.Dialog):
                 port = "3389"
         self.port.set_text(port)
         grid.attach(self.port, 1, 3, 1, 1)
+        self.port.set_editable(not no_edit)
         self.port.show()
 
         label = Gtk.Label(label=_("User Name:"))
@@ -217,6 +229,7 @@ class ConProfile(Gtk.Dialog):
             username = ''
         self.user.set_text(username)
         grid.attach(self.user, 1, 4, 1, 1)
+        self.user.set_editable(not no_edit)
         self.user.show()
 
         label = Gtk.Label(label=_("Domain Name:"))
@@ -230,6 +243,7 @@ class ConProfile(Gtk.Dialog):
             domain = ''
         self.domain.set_text(domain)
         grid.attach(self.domain, 1, 5, 1, 1)
+        self.domain.set_editable(not no_edit)
         self.domain.show()
 
         label = Gtk.Label(label=_("option arg:"))
@@ -243,6 +257,7 @@ class ConProfile(Gtk.Dialog):
             optarg = ''
         self.optarg.set_text(optarg)
         grid.attach(self.optarg, 1, 6, 1, 1)
+        self.optarg.set_editable(not no_edit)
         self.optarg.show()
 
         proto = profile['proto']
@@ -362,10 +377,14 @@ class LIcon(Gtk.EventBox):
         self.mwin.conmod = 1
 
     def pop_dialog(self, edit=False):
+        global no_edit
+
         condial = ConProfile(self.sec, self.profile, edit)
         condial.show()
         response = condial.run()
         condial.destroy()
+        if no_edit:
+            response = Gtk.ResponseType.CANCEL
         return (condial, response)
 
     def view_edit_profile(self, data):
@@ -452,14 +471,23 @@ class MWin(Gtk.Window):
             self.conini['DEFAULT']['proto'] = 'SPICE'
             self.conini['DEFAULT']['port'] = '5900'
             self.conmod = 1
-        icon = LIcon(self, proadd)
-        self.hbox.pack_start(icon, False, False, 8)
-        icon.show()
+
+        if not no_edit:
+            icon = LIcon(self, proadd)
+            self.hbox.pack_start(icon, False, False, 8)
+            icon.show()
 
         for sec in self.conini.sections():
             icon = LIcon(self, sec)
             self.hbox.pack_start(icon, False, False, 8)
             icon.show()
+        if no_edit and len(self.conini.sections()) == 0:
+            md = Gtk.MessageDialog(flags=0,
+                    message_type=Gtk.MessageType.INFO,
+                    buttons=Gtk.ButtonsType.OK, text=_("No Connection Profile"))
+            md.run()
+            md.destroy()
+            self.resize(400, 300)
 
         hbox = Gtk.Box()
         hbox.set_homogeneous(True)
@@ -494,6 +522,7 @@ class MWin(Gtk.Window):
 
     def on_button_clicked(self, widget):
         global noquit
+
         if widget == self.rebbut:
             act = "--reboot"
         elif widget == self.shutbut:
@@ -531,6 +560,7 @@ for optval in opts:
         confile = optval[1]
     elif optval[0] == '--no-quit':
         noquit = True
+        no_edit = True
     
 conini = configparser.ConfigParser()
 if os.path.isfile(confile):
