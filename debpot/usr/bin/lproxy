@@ -532,6 +532,18 @@ class MWin(Gtk.Window):
                 act = "--logout"
             else:
                 act = "--exit"
+
+        yesno = Gtk.MessageDialog(transient_for=self, flags=0,
+                message_type=Gtk.MessageType.QUESTION,
+                buttons=Gtk.ButtonsType.YES_NO,
+                text=_('Warning!')
+                )
+        yesno.format_secondary_text(_('Do You Really Want to'+act+'?'))
+        response = yesno.run()
+        yesno.destroy()
+        if response == Gtk.ResponseType.NO:
+            return True
+
         Gtk.main_quit()
         if act == "--exit":
             return
