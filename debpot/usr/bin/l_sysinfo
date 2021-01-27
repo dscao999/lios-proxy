@@ -15,6 +15,9 @@ import os.path
 import time
 import threading
 from datetime import datetime
+import socket
+import fcntl
+import struct
 
 class MDateTime(threading.Thread):
     def __init__(self, win):
@@ -38,6 +41,11 @@ mem_file = '/proc/meminfo'
 cpu_file = '/proc/cpuinfo'
 net_dir = '/sys/class/net/'
 
+def get_nic_ip(ifname):
+    s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+    ipa = fcntl.ioctl(s.fileno(), 0x8915, struct.pack('64s', ifname.encode('utf-8')))[20:24]
+    return socket.inet_ntoa(ipa)
+
 def netinfo():
     netports = []
     for netlink in os.listdir(net_dir):
@@ -46,8 +54,9 @@ def netinfo():
             continue
 
         wired = 1
-        mack = ' '
+        mack = ''
         upl = 0
+        ipa = ''
         for prop in os.listdir(netport):
             if prop == 'wireless':
                 wired = 0
@@ -59,7 +68,9 @@ def netinfo():
                     updown = fin.readline().rstrip('\n')
                     if updown == 'up':
                         upl = 1
-        netports.append((os.path.basename(netport), mac, wired, upl))
+                        ipa = get_nic_ip(netlink)
+        netports.append((os.path.basename(netport), mac, wired, upl, ipa))
+
     return netports
 
 def hostname():
@@ -197,7 +208,6 @@ class MWindow(Gtk.Window):
         hname_content = Gtk.Entry(text=sysinfo.hostname)
         hname_content.set_editable(False)
         hbox1.pack_start(hname_content, True, True, 0)
-#        hname_content.set_justify(Gtk.Justification.LEFT)
 
         hbox2 = Gtk.Box(homogeneous=False)
         grid.attach(hbox2, 0, 1, 2, 1)
@@ -250,7 +260,7 @@ class MWindow(Gtk.Window):
 
         nrow += 1
 
-        for nic, mac, wired, updown in sysinfo.netinfo:
+        for nic, mac, wired, updown, ip in sysinfo.netinfo:
             hbox = Gtk.Box(homogeneous=False)
             vbox.pack_start(hbox, True, True, 0)
 
@@ -278,6 +288,11 @@ class MWindow(Gtk.Window):
                 upd_label.set_text(_("Up"))
             else:
                 upd_label.set_text(_("Down"))
+            ip_label = Gtk.Entry(text=ip)
+            ip_label.set_width_chars(18)
+            ip_label.set_editable(False)
+            hbox.pack_start(ip_label, False, True, 0)
+
             nrow += 1
 
         hseparator = Gtk.Separator(orientation=Gtk.Orientation.HORIZONTAL)
